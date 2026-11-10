@@ -1,84 +1,96 @@
 
 from flask import Flask, jsonify, request
-import pandas as pd
+from flask_cors import CORS
 
 from market_data import get_market_data
 from analyzer import analyze_market
 
 app = Flask(__name__)
+CORS(app)
 
 ALLOWED_SYMBOLS = [
-    "BTC", "ETH", "EURUSD",
-    "GBPUSD", "AAPL", "TSLA"
+    # Crypto
+    "BTC", "ETH", "SOL", "BNB", "XRP", "DOGE", "ADA", "TRX",
+    "AVAX", "LINK", "DOT", "LTC", "BCH", "TON", "SHIB", "PEPE",
+    "SUI", "NEAR", "APT", "UNI",
+
+    # Forex
+    "EURUSD", "GBPUSD", "USDJPY", "USDCHF", "USDCAD",
+    "AUDUSD", "NZDUSD", "EURJPY", "GBPJPY", "EURGBP",
+    "AUDJPY", "EURAUD", "GBPAUD", "CADJPY", "CHFJPY",
+    "EURNZD", "GBPCAD", "AUDCAD", "NZDCAD", "EURCHF",
+
+    # Stocks
+    "AAPL", "TSLA", "NVDA", "MSFT", "AMZN", "GOOGL", "META",
+    "NFLX", "AMD", "INTC", "COIN", "PLTR", "ORCL", "IBM", "DIS"
 ]
 
 
-@app.after_request
-def add_cors_headers(response):
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
-    response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-    return response
-
-
-@app.route("/")
+@app.route("/", methods=["GET"])
 def home():
     return jsonify({
         "name": "SAMANDER AI API",
-        "status": "online"
+        "status": "online",
+        "supported_symbols": len(ALLOWED_SYMBOLS),
+        "markets": ["Crypto", "Forex", "Stocks"]
     })
 
 
 @app.route("/api/analyze", methods=["GET"])
 def analyze():
-    symbol = request.args.get("symbol", "").upper()
+    symbol = request.args.get("symbol", "BTC").upper()
 
     if symbol not in ALLOWED_SYMBOLS:
         return jsonify({
-            "error": "Unsupported symbol"
+            "status": "error",
+            "message": "Unsupported symbol"
         }), 400
 
+    data = get_market_data(symbol)
+
+    if data is None or data.empty:
+        return jsonify({
+            "status": "error",
+            "symbol": symbol,
+            "message": "Market data is currently unavailable"
+        }), 503
+
     try:
-        data = get_market_data(symbol)
-
-        if data is None or data.empty:
-            return jsonify({
-                "error": "Market data unavailable"
-            }), 503
-
         result = analyze_market(data)
 
-        if result.get("status") != "Analysis complete":
-            return jsonify(result), 503
+        if not isinstance(result, dict):
+            result = {"analysis": result}
 
-        candles = []
+        result["status"] = "success"
+        result["symbol"] = symbol
+        result["timeframe"] = "1m"
 
-        for timestamp, row in data.tail(30).iterrows():
-            candles.append({
-                "time": pd.Timestamp(timestamp).isoformat(),
+        result["price"] = float(data["close"].iloc[-1])
+        result["candles"] = [
+            {
+                "time": str(index),
                 "open": float(row["open"]),
                 "high": float(row["high"]),
                 "low": float(row["low"]),
                 "close": float(row["close"])
-            })
+            }
+            for index, row in data.tail(30).iterrows()
+        ]
 
-        return jsonify({
-            "status": "success",
-            "symbol": symbol,
-            "timeframe": "1m",
-            "price": result["price"],
-            "market": result["market"],
-            "rsi": result["rsi"],
-            "ema20": result["ema20"],
-            "ema50": result["ema50"],
-            "patterns": result["patterns"],
-            "candles": candles,
-            "last_candle_time": candles[-1]["time"]
-        })
+        result["last_candle_time"] = str(data.index[-1])
+
+        return jsonify(result)
 
     except Exception as error:
-        app.logger.exception("Analysis error")
+        print("Analysis error:", error)
+
         return jsonify({
-            "error": "Analysis failed"
+            "status": "error",
+            "symbol": symbol,
+            "message": "Analysis could not be completed"
         }), 500
-      
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
+    
