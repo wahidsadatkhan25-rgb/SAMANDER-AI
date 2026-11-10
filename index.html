@@ -25,6 +25,7 @@ button,select{
   width:100%;padding:13px 8px;border-radius:10px;
   background:#1c2b43;color:white;border:1px solid #334966
 }
+button{cursor:pointer}
 button.active{background:#075985;border-color:#38bdf8}
 select{margin-top:14px}
 .price-box{
@@ -72,13 +73,10 @@ select{margin-top:14px}
     <button onclick="setMarket('Stocks',this)">STOCKS</button>
   </div>
 
-  <select id="symbol" onchange="fetchAnalysis()">
-    <option value="BTC">BTC</option>
-    <option value="ETH">ETH</option>
-  </select>
+  <select id="symbol" onchange="fetchAnalysis()"></select>
 
   <div class="price-box">
-    <small id="priceLabel">BTC LATEST AVAILABLE PRICE</small>
+    <small id="priceLabel">LATEST AVAILABLE PRICE</small>
     <div id="price">Loading...</div>
   </div>
 </section>
@@ -132,18 +130,36 @@ select{margin-top:14px}
 const API_URL = "https://samander-ai-api.onrender.com";
 
 const symbols = {
-  Crypto:["BTC","ETH"],
-  Forex:["EURUSD","GBPUSD"],
-  Stocks:["AAPL","TSLA"]
+  Crypto: [
+    "BTC","ETH","SOL","BNB","XRP","DOGE","ADA","TRX",
+    "AVAX","LINK","DOT","LTC","BCH","TON","SHIB","PEPE",
+    "SUI","NEAR","APT","UNI"
+  ],
+
+  Forex: [
+    "EURUSD","GBPUSD","USDJPY","USDCHF","USDCAD",
+    "AUDUSD","NZDUSD","EURJPY","GBPJPY","EURGBP",
+    "AUDJPY","EURAUD","GBPAUD","CADJPY","CHFJPY",
+    "EURNZD","GBPCAD","AUDCAD","NZDCAD","EURCHF"
+  ],
+
+  Stocks: [
+    "AAPL","TSLA","NVDA","MSFT","AMZN","GOOGL","META",
+    "NFLX","AMD","INTC","COIN","PLTR","ORCL","IBM","DIS"
+  ]
 };
 
 let seconds = 60;
 let loading = false;
 let requestNumber = 0;
+let selectedMarket = "Crypto";
 
 function setMarket(market,button){
+  selectedMarket=market;
+
   document.querySelectorAll(".markets button")
     .forEach(b=>b.classList.remove("active"));
+
   button.classList.add("active");
 
   const select=document.getElementById("symbol");
@@ -162,6 +178,8 @@ function setMarket(market,button){
 }
 
 function resetDashboard(){
+  requestNumber++;
+
   document.getElementById("circle").className="circle neutral";
   document.getElementById("result").textContent="NEUTRAL";
   document.getElementById("direction").textContent="Waiting";
@@ -183,24 +201,34 @@ async function fetchAnalysis(){
 
   document.getElementById("priceLabel").textContent=
     symbol+" LATEST AVAILABLE PRICE";
-  document.getElementById("dataStatus").textContent="Fetching market data...";
-  document.getElementById("connection").textContent="● CONNECTING";
+
+  document.getElementById("dataStatus").textContent=
+    "Fetching market data...";
+
+  document.getElementById("connection").textContent=
+    "● CONNECTING";
 
   try{
     const response=await fetch(
       API_URL+"/api/analyze?symbol="+encodeURIComponent(symbol)
     );
+
     const data=await response.json();
 
     if(thisRequest!==requestNumber)return;
+
     if(!response.ok||data.status!=="success"){
-      throw new Error(data.error||"Market data unavailable");
+      throw new Error(data.message||"Market data unavailable");
     }
 
     const candles=Array.isArray(data.candles)?data.candles:[];
-    if(!candles.length)throw new Error("No candle data returned");
+
+    if(!candles.length){
+      throw new Error("No candle data returned");
+    }
 
     const last=candles[candles.length-1];
+
     let direction="NEUTRAL";
     let circleClass="neutral";
 
@@ -214,10 +242,14 @@ async function fetchAnalysis(){
 
     document.getElementById("price").textContent=
       data.price!==null && data.price!==undefined
-        ? Number(data.price).toLocaleString(undefined,{maximumFractionDigits:8})
+        ? Number(data.price).toLocaleString(
+            undefined,{maximumFractionDigits:8}
+          )
         : "Unavailable";
 
-    document.getElementById("circle").className="circle "+circleClass;
+    document.getElementById("circle").className=
+      "circle "+circleClass;
+
     document.getElementById("result").textContent=direction;
     document.getElementById("direction").textContent=direction;
     document.getElementById("trend").textContent=data.market||"--";
@@ -229,30 +261,46 @@ async function fetchAnalysis(){
     document.getElementById("lastUpdate").textContent=
       "Last candle: "+(data.last_candle_time||"--");
 
-    document.getElementById("connection").textContent="● API CONNECTED";
+    document.getElementById("connection").textContent=
+      "● API CONNECTED";
+
     document.getElementById("dataStatus").textContent=
       "Data received • "+data.symbol+" • 1m interval";
 
   }catch(error){
-    resetDashboard();
+
+    if(thisRequest!==requestNumber)return;
+
+    document.getElementById("circle").className="circle neutral";
+    document.getElementById("result").textContent="NEUTRAL";
+    document.getElementById("direction").textContent="Unavailable";
+    document.getElementById("price").textContent="Unavailable";
     document.getElementById("connection").textContent="● DATA ERROR";
     document.getElementById("dataStatus").textContent=error.message;
+
   }finally{
     loading=false;
   }
 }
 
+// Populate initial crypto list
+const firstButton=document.querySelector(".markets button");
+setMarket("Crypto",firstButton);
+
+// Refresh every 60 seconds
 setInterval(()=>{
   seconds--;
+
   if(seconds<=0){
     seconds=60;
     fetchAnalysis();
   }
+
   document.getElementById("timer").textContent=
     "00:"+String(seconds).padStart(2,"0");
+
 },1000);
 
-fetchAnalysis();
 </script>
 
 </body>
