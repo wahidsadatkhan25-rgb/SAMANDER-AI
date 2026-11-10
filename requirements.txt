@@ -1,4 +1,7 @@
+
 python-telegram-bot[webhooks]==22.5
 pandas
 numpy
 yfinance
+Flask>=3.0,<4
+gunicorn>=23,<24
