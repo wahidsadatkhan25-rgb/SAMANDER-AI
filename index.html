@@ -1,162 +1,51 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SAMANDER AI Dashboard</title>
+<title>SAMANDER AI</title>
 
 <style>
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#080d18;color:white;font-family:Arial,sans-serif;
+  padding:18px;max-width:700px;margin:auto
 }
-
-body {
-  background: #080d18;
-  color: #ffffff;
-  font-family: Arial, sans-serif;
-  padding: 20px;
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px}
+.logo{font-size:22px;font-weight:bold;color:#38bdf8}
+.status{font-size:11px;color:#22c55e}
+.panel{
+  background:#111b2d;border:1px solid #25344d;
+  border-radius:18px;padding:18px;margin-bottom:18px
 }
-
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
+h2{font-size:19px;margin-bottom:16px}
+.markets{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+button,select{
+  width:100%;padding:13px 8px;border-radius:10px;
+  background:#1c2b43;color:white;border:1px solid #334966
 }
-
-.logo {
-  font-size: 23px;
-  font-weight: bold;
-  color: #38bdf8;
+button.active{background:#075985;border-color:#38bdf8}
+select{margin-top:14px}
+.circle-wrap{display:flex;justify-content:center;margin:25px 0}
+.circle{
+  width:220px;height:220px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;border:8px solid #64748b;
+  box-shadow:0 0 25px #64748b44;transition:.3s
 }
-
-.status {
-  color: #22c55e;
-  font-size: 12px;
+.circle.up{border-color:#22c55e;box-shadow:0 0 35px #22c55e66}
+.circle.down{border-color:#ef4444;box-shadow:0 0 35px #ef444466}
+.circle.neutral{border-color:#64748b}
+#result{font-size:25px;font-weight:bold;text-align:center}
+#timer{font-size:17px;color:#94a3b8;margin-top:12px}
+.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.metric{background:#1a2940;border-radius:12px;padding:15px;overflow-wrap:anywhere}
+.metric small{color:#94a3b8}
+.metric strong{display:block;font-size:18px;margin-top:8px}
+#dataStatus,#lastUpdate{
+  color:#94a3b8;text-align:center;font-size:12px;margin-top:12px
 }
-
-h2 {
-  font-size: 21px;
-  margin-bottom: 18px;
-}
-
-.panel {
-  background: #111b2d;
-  border: 1px solid #25344d;
-  border-radius: 18px;
-  padding: 20px;
-  margin-bottom: 20px;
-}
-
-.markets {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-}
-
-button, select {
-  background: #1c2b43;
-  color: white;
-  border: 1px solid #334966;
-  padding: 13px 8px;
-  border-radius: 10px;
-  cursor: pointer;
-  width: 100%;
-}
-
-button.active {
-  background: #075985;
-  border-color: #38bdf8;
-}
-
-select {
-  margin-top: 15px;
-}
-
-.circle-wrap {
-  display: flex;
-  justify-content: center;
-  margin: 25px 0;
-}
-
-.circle {
-  width: 220px;
-  height: 220px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  border: 8px solid #64748b;
-  box-shadow: 0 0 25px #64748b44;
-  transition: border-color .5s, box-shadow .5s;
-}
-
-.circle.bullish {
-  border-color: #22c55e;
-  box-shadow: 0 0 35px #22c55e66;
-}
-
-.circle.bearish {
-  border-color: #ef4444;
-  box-shadow: 0 0 35px #ef444466;
-}
-
-.circle.neutral {
-  border-color: #64748b;
-  box-shadow: 0 0 25px #64748b44;
-}
-
-#result {
-  font-size: 27px;
-  font-weight: bold;
-}
-
-#timer {
-  font-size: 17px;
-  color: #94a3b8;
-  margin-top: 10px;
-}
-
-.metrics {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
-
-.metric {
-  background: #1a2940;
-  border-radius: 12px;
-  padding: 15px;
-  overflow-wrap: anywhere;
-}
-
-.metric small {
-  color: #94a3b8;
-}
-
-.metric strong {
-  display: block;
-  font-size: 19px;
-  margin-top: 8px;
-}
-
-.footer {
-  color: #64748b;
-  text-align: center;
-  font-size: 12px;
-  margin-top: 25px;
-}
-
-#dataStatus, #lastUpdate {
-  color: #94a3b8;
-  text-align: center;
-  font-size: 12px;
-  margin-top: 10px;
-}
+.footer{text-align:center;color:#64748b;font-size:12px;margin:22px 0}
 </style>
 </head>
 
@@ -177,8 +66,8 @@ select {
   </div>
 
   <select id="symbol" onchange="fetchAnalysis()">
-    <option>BTC</option>
-    <option>ETH</option>
+    <option value="BTC">BTC</option>
+    <option value="ETH">ETH</option>
   </select>
 </section>
 
@@ -194,23 +83,28 @@ select {
 
   <div class="metrics">
     <div class="metric">
+      <small>Candle Direction</small>
+      <strong id="direction">Waiting</strong>
+    </div>
+    <div class="metric">
       <small>Market Trend</small>
       <strong id="trend">Waiting</strong>
     </div>
-
     <div class="metric">
       <small>RSI</small>
       <strong id="rsi">--</strong>
     </div>
-
     <div class="metric">
       <small>EMA 20</small>
       <strong id="ema20">--</strong>
     </div>
-
     <div class="metric">
       <small>EMA 50</small>
       <strong id="ema50">--</strong>
+    </div>
+    <div class="metric">
+      <small>Candles Checked</small>
+      <strong id="count">--</strong>
     </div>
   </div>
 
@@ -226,128 +120,121 @@ select {
 const API_URL = "https://samander-ai-api.onrender.com";
 
 const symbols = {
-  Crypto: ["BTC", "ETH"],
-  Forex: ["EURUSD", "GBPUSD"],
-  Stocks: ["AAPL", "TSLA"]
+  Crypto:["BTC","ETH"],
+  Forex:["EURUSD","GBPUSD"],
+  Stocks:["AAPL","TSLA"]
 };
 
 let seconds = 60;
 let loading = false;
+let selectedSymbol = "BTC";
+let requestNumber = 0;
 
-function setMarket(market, button) {
+function setMarket(market,button){
   document.querySelectorAll(".markets button")
-    .forEach(b => b.classList.remove("active"));
-
+    .forEach(b=>b.classList.remove("active"));
   button.classList.add("active");
 
-  const select = document.getElementById("symbol");
-  select.innerHTML = "";
+  const select=document.getElementById("symbol");
+  select.innerHTML="";
 
-  symbols[market].forEach(symbol => {
-    const option = document.createElement("option");
-    option.value = symbol;
-    option.textContent = symbol;
+  symbols[market].forEach(symbol=>{
+    const option=document.createElement("option");
+    option.value=symbol;
+    option.textContent=symbol;
     select.appendChild(option);
   });
 
-  seconds = 60;
-  resetDashboard();
+  seconds=60;
   fetchAnalysis();
 }
 
-function resetDashboard() {
-  document.getElementById("circle").className = "circle neutral";
-  document.getElementById("result").textContent = "NEUTRAL";
-  document.getElementById("trend").textContent = "Waiting";
-  document.getElementById("rsi").textContent = "--";
-  document.getElementById("ema20").textContent = "--";
-  document.getElementById("ema50").textContent = "--";
-  document.getElementById("lastUpdate").textContent = "Last candle: --";
+function resetDashboard(){
+  document.getElementById("circle").className="circle neutral";
+  document.getElementById("result").textContent="NEUTRAL";
+  document.getElementById("direction").textContent="Waiting";
+  document.getElementById("trend").textContent="Waiting";
+  document.getElementById("rsi").textContent="--";
+  document.getElementById("ema20").textContent="--";
+  document.getElementById("ema50").textContent="--";
+  document.getElementById("count").textContent="--";
+  document.getElementById("lastUpdate").textContent="Last candle: --";
 }
 
-async function fetchAnalysis() {
-  if (loading) return;
+async function fetchAnalysis(){
+  if(loading)return;
 
-  loading = true;
+  loading=true;
+  const thisRequest=++requestNumber;
+  const symbol=document.getElementById("symbol").value;
+  selectedSymbol=symbol;
 
-  const symbol = document.getElementById("symbol").value;
-  const status = document.getElementById("dataStatus");
+  document.getElementById("dataStatus").textContent="Fetching market data...";
+  document.getElementById("connection").textContent="● CONNECTING";
 
-  status.textContent = "Fetching market data...";
-  document.getElementById("connection").textContent = "● CONNECTING";
-
-  try {
-    const response = await fetch(
-      API_URL + "/api/analyze?symbol=" + encodeURIComponent(symbol)
+  try{
+    const response=await fetch(
+      API_URL+"/api/analyze?symbol="+encodeURIComponent(symbol)
     );
+    const data=await response.json();
 
-    const data = await response.json();
-
-    if (!response.ok || data.status !== "success") {
-      throw new Error(data.error || "Market data unavailable");
+    if(thisRequest!==requestNumber)return;
+    if(!response.ok||data.status!=="success"){
+      throw new Error(data.error||"Market data unavailable");
     }
 
-    let state = "NEUTRAL";
-    let circleClass = "neutral";
+    const candles=Array.isArray(data.candles)?data.candles:[];
+    if(!candles.length)throw new Error("No candle data returned");
 
-    if (data.market === "Uptrend") {
-      state = "BULLISH";
-      circleClass = "bullish";
-    } else if (data.market === "Downtrend") {
-      state = "BEARISH";
-      circleClass = "bearish";
+    const last=candles[candles.length-1];
+    let direction="NEUTRAL";
+    let state="neutral";
+    let circleClass="neutral";
+
+    if(last.close>last.open){
+      direction="UPWARD";
+      state="UPWARD";
+      circleClass="up";
+    }else if(last.close<last.open){
+      direction="DOWNWARD";
+      state="DOWNWARD";
+      circleClass="down";
     }
 
-    document.getElementById("circle").className =
-      "circle " + circleClass;
+    document.getElementById("circle").className="circle "+circleClass;
+    document.getElementById("result").textContent=state;
+    document.getElementById("direction").textContent=direction;
+    document.getElementById("trend").textContent=data.market||"--";
+    document.getElementById("rsi").textContent=data.rsi??"--";
+    document.getElementById("ema20").textContent=data.ema20??"--";
+    document.getElementById("ema50").textContent=data.ema50??"--";
+    document.getElementById("count").textContent=candles.length;
+    document.getElementById("lastUpdate").textContent=
+      "Last candle: "+(data.last_candle_time||"--");
 
-    document.getElementById("result").textContent = state;
-    document.getElementById("trend").textContent = data.market;
-    document.getElementById("rsi").textContent =
-      data.rsi ?? "--";
-    document.getElementById("ema20").textContent =
-      data.ema20 ?? "--";
-    document.getElementById("ema50").textContent =
-      data.ema50 ?? "--";
+    document.getElementById("connection").textContent="● API CONNECTED";
+    document.getElementById("dataStatus").textContent=
+      "Analysis received • "+data.symbol+" • 1m data";
 
-    document.getElementById("lastUpdate").textContent =
-      "Last candle: " + data.last_candle_time;
-
-    document.getElementById("connection").textContent =
-      "● API CONNECTED";
-
-    status.textContent =
-      "Analysis received • " + data.symbol;
-
-  } catch (error) {
+  }catch(error){
     resetDashboard();
-
-    document.getElementById("connection").textContent =
-      "● DATA ERROR";
-
-    status.textContent = error.message;
-
-  } finally {
-    loading = false;
+    document.getElementById("connection").textContent="● DATA ERROR";
+    document.getElementById("dataStatus").textContent=error.message;
+  }finally{
+    loading=false;
   }
 }
 
-// Visual refresh countdown.
-// It is not synchronized to the exchange candle clock.
-setInterval(() => {
+setInterval(()=>{
   seconds--;
-
-  if (seconds < 0) {
-    seconds = 60;
+  if(seconds<=0){
+    seconds=60;
     fetchAnalysis();
   }
+  document.getElementById("timer").textContent=
+    "00:"+String(seconds).padStart(2,"0");
+},1000);
 
-  document.getElementById("timer").textContent =
-    "00:" + String(seconds).padStart(2, "0");
-
-}, 1000);
-
-// Initial analysis
 fetchAnalysis();
 </script>
 
