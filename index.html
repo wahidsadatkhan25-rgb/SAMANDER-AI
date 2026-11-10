@@ -131,6 +131,7 @@ select {
   background: #1a2940;
   border-radius: 12px;
   padding: 15px;
+  overflow-wrap: anywhere;
 }
 
 .metric small {
@@ -149,6 +150,13 @@ select {
   font-size: 12px;
   margin-top: 25px;
 }
+
+#dataStatus, #lastUpdate {
+  color: #94a3b8;
+  text-align: center;
+  font-size: 12px;
+  margin-top: 10px;
+}
 </style>
 </head>
 
@@ -156,7 +164,7 @@ select {
 
 <header>
   <div class="logo">🔥 SAMANDER AI</div>
-  <div class="status">● DASHBOARD</div>
+  <div class="status" id="connection">● CONNECTING</div>
 </header>
 
 <section class="panel">
@@ -168,10 +176,9 @@ select {
     <button onclick="setMarket('Stocks',this)">STOCKS</button>
   </div>
 
-  <select id="symbol">
+  <select id="symbol" onchange="fetchAnalysis()">
     <option>BTC</option>
     <option>ETH</option>
-    <option>SOL</option>
   </select>
 </section>
 
@@ -206,6 +213,9 @@ select {
       <strong id="ema50">--</strong>
     </div>
   </div>
+
+  <div id="dataStatus">Connecting to market data...</div>
+  <div id="lastUpdate">Last candle: --</div>
 </section>
 
 <div class="footer">
@@ -213,11 +223,16 @@ select {
 </div>
 
 <script>
+const API_URL = "https://samander-ai-api.onrender.com";
+
 const symbols = {
-  Crypto: ["BTC", "ETH", "SOL"],
-  Forex: ["EURUSD", "GBPUSD", "USDJPY"],
-  Stocks: ["AAPL", "TSLA", "NVDA"]
+  Crypto: ["BTC", "ETH"],
+  Forex: ["EURUSD", "GBPUSD"],
+  Stocks: ["AAPL", "TSLA"]
 };
+
+let seconds = 60;
+let loading = false;
 
 function setMarket(market, button) {
   document.querySelectorAll(".markets button")
@@ -230,11 +245,14 @@ function setMarket(market, button) {
 
   symbols[market].forEach(symbol => {
     const option = document.createElement("option");
+    option.value = symbol;
     option.textContent = symbol;
     select.appendChild(option);
   });
 
+  seconds = 60;
   resetDashboard();
+  fetchAnalysis();
 }
 
 function resetDashboard() {
@@ -244,18 +262,93 @@ function resetDashboard() {
   document.getElementById("rsi").textContent = "--";
   document.getElementById("ema20").textContent = "--";
   document.getElementById("ema50").textContent = "--";
+  document.getElementById("lastUpdate").textContent = "Last candle: --";
 }
 
-// Visual countdown only; it does not measure a live market candle.
-let seconds = 60;
+async function fetchAnalysis() {
+  if (loading) return;
 
+  loading = true;
+
+  const symbol = document.getElementById("symbol").value;
+  const status = document.getElementById("dataStatus");
+
+  status.textContent = "Fetching market data...";
+  document.getElementById("connection").textContent = "● CONNECTING";
+
+  try {
+    const response = await fetch(
+      API_URL + "/api/analyze?symbol=" + encodeURIComponent(symbol)
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || data.status !== "success") {
+      throw new Error(data.error || "Market data unavailable");
+    }
+
+    let state = "NEUTRAL";
+    let circleClass = "neutral";
+
+    if (data.market === "Uptrend") {
+      state = "BULLISH";
+      circleClass = "bullish";
+    } else if (data.market === "Downtrend") {
+      state = "BEARISH";
+      circleClass = "bearish";
+    }
+
+    document.getElementById("circle").className =
+      "circle " + circleClass;
+
+    document.getElementById("result").textContent = state;
+    document.getElementById("trend").textContent = data.market;
+    document.getElementById("rsi").textContent =
+      data.rsi ?? "--";
+    document.getElementById("ema20").textContent =
+      data.ema20 ?? "--";
+    document.getElementById("ema50").textContent =
+      data.ema50 ?? "--";
+
+    document.getElementById("lastUpdate").textContent =
+      "Last candle: " + data.last_candle_time;
+
+    document.getElementById("connection").textContent =
+      "● API CONNECTED";
+
+    status.textContent =
+      "Analysis received • " + data.symbol;
+
+  } catch (error) {
+    resetDashboard();
+
+    document.getElementById("connection").textContent =
+      "● DATA ERROR";
+
+    status.textContent = error.message;
+
+  } finally {
+    loading = false;
+  }
+}
+
+// Visual refresh countdown.
+// It is not synchronized to the exchange candle clock.
 setInterval(() => {
   seconds--;
-  if (seconds < 0) seconds = 60;
+
+  if (seconds < 0) {
+    seconds = 60;
+    fetchAnalysis();
+  }
 
   document.getElementById("timer").textContent =
-    "01:" + String(seconds).padStart(2, "0");
+    "00:" + String(seconds).padStart(2, "0");
+
 }, 1000);
+
+// Initial analysis
+fetchAnalysis();
 </script>
 
 </body>
