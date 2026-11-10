@@ -1,4 +1,7 @@
+import os
 import asyncio
+import logging
+
 from telegram import Update
 from telegram.ext import (
     Application,
@@ -9,19 +12,19 @@ from telegram.ext import (
 from analyzer import analyze_market
 from market_data import get_market_data
 
-TOKEN = __import__("os").getenv("BOT_TOKEN")
+logging.basicConfig(level=logging.INFO)
+
+TOKEN = os.getenv("BOT_TOKEN")
+PUBLIC_URL = os.getenv("RENDER_EXTERNAL_URL")
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🔥 SAMANDER AI\n\n"
-        "MULTI-MARKET ANALYZER\n\n"
-        "Select a market:\n\n"
-        "₿ Crypto: /analyze BTC\n"
-        "💱 Forex: /analyze EURUSD\n"
-        "📈 Stocks: /analyze AAPL\n\n"
-        "Other symbols:\n"
-        "ETH, GBPUSD, TSLA\n\n"
+        "MULTI-MARKET CHART ANALYZER\n\n"
+        "Crypto: /analyze BTC\n"
+        "Forex: /analyze EURUSD\n"
+        "Stocks: /analyze AAPL\n\n"
         "Timeframe: 1 Minute"
     )
 
@@ -36,14 +39,16 @@ async def analyze(update: Update, context: ContextTypes.DEFAULT_TYPE):
     symbol = context.args[0].upper()
 
     await update.message.reply_text(
-        f"🔍 SAMANDER AI\nAnalyzing {symbol}..."
+        f"Analyzing {symbol}..."
     )
 
-    data = await asyncio.to_thread(get_market_data, symbol)
+    data = await asyncio.to_thread(
+        get_market_data, symbol
+    )
 
     if data is None or data.empty:
         await update.message.reply_text(
-            "Market data unavailable. Try again later."
+            "Market data unavailable."
         )
         return
 
@@ -53,8 +58,6 @@ async def analyze(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(result["status"])
         return
 
-    patterns = ", ".join(result["patterns"])
-
     message = (
         f"🔥 SAMANDER AI\n\n"
         f"Symbol: {symbol}\n"
@@ -62,28 +65,36 @@ async def analyze(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Price: {result['price']}\n"
         f"Market: {result['market']}\n"
         f"RSI: {result['rsi']}\n"
-        f"EMA 20: {result['ema20']}\n"
-        f"EMA 50: {result['ema50']}\n\n"
-        f"Patterns: {patterns}\n\n"
-        f"Candles checked: {result['candles_checked']}\n"
-        f"Educational chart analysis only."
+        f"EMA20: {result['ema20']}\n"
+        f"EMA50: {result['ema50']}\n"
+        f"Patterns: {', '.join(result['patterns'])}\n\n"
+        "Educational chart analysis."
     )
 
     await update.message.reply_text(message)
 
 
 def main():
-    if not TOKEN:
-        raise RuntimeError("BOT_TOKEN is missing")
+    if not TOKEN or not PUBLIC_URL:
+        raise RuntimeError(
+            "BOT_TOKEN or RENDER_EXTERNAL_URL missing"
+        )
 
     app = Application.builder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("analyze", analyze))
 
-    print("SAMANDER AI starting...")
+    port = int(os.getenv("PORT", "10000"))
 
-    app.run_polling()
+    print("SAMANDER AI webhook starting...")
+
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        url_path=TOKEN,
+        webhook_url=f"{PUBLIC_URL}/{TOKEN}"
+    )
 
 
 if __name__ == "__main__":
