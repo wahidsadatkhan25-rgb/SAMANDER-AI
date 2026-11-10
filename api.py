@@ -2,28 +2,13 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
-from market_data import get_market_data
+from market_data import get_market_data, SYMBOLS
 from analyzer import analyze_market
 
 app = Flask(__name__)
 CORS(app)
 
-ALLOWED_SYMBOLS = [
-    # Crypto
-    "BTC", "ETH", "SOL", "BNB", "XRP", "DOGE", "ADA", "TRX",
-    "AVAX", "LINK", "DOT", "LTC", "BCH", "TON", "SHIB", "PEPE",
-    "SUI", "NEAR", "APT", "UNI",
-
-    # Forex
-    "EURUSD", "GBPUSD", "USDJPY", "USDCHF", "USDCAD",
-    "AUDUSD", "NZDUSD", "EURJPY", "GBPJPY", "EURGBP",
-    "AUDJPY", "EURAUD", "GBPAUD", "CADJPY", "CHFJPY",
-    "EURNZD", "GBPCAD", "AUDCAD", "NZDCAD", "EURCHF",
-
-    # Stocks
-    "AAPL", "TSLA", "NVDA", "MSFT", "AMZN", "GOOGL", "META",
-    "NFLX", "AMD", "INTC", "COIN", "PLTR", "ORCL", "IBM", "DIS"
-]
+ALLOWED_SYMBOLS = list(SYMBOLS.keys())
 
 
 @app.route("/", methods=["GET"])
@@ -32,13 +17,14 @@ def home():
         "name": "SAMANDER AI API",
         "status": "online",
         "supported_symbols": len(ALLOWED_SYMBOLS),
+        "symbols": ALLOWED_SYMBOLS,
         "markets": ["Crypto", "Forex", "Stocks"]
     })
 
 
 @app.route("/api/analyze", methods=["GET"])
 def analyze():
-    symbol = request.args.get("symbol", "BTC").upper()
+    symbol = request.args.get("symbol", "BTC").upper().strip()
 
     if symbol not in ALLOWED_SYMBOLS:
         return jsonify({
@@ -64,8 +50,8 @@ def analyze():
         result["status"] = "success"
         result["symbol"] = symbol
         result["timeframe"] = "1m"
-
         result["price"] = float(data["close"].iloc[-1])
+
         result["candles"] = [
             {
                 "time": str(index),
