@@ -1,0 +1,262 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAMANDER AI Dashboard</title>
+
+<style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #080d18;
+  color: #ffffff;
+  font-family: Arial, sans-serif;
+  padding: 20px;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.logo {
+  font-size: 23px;
+  font-weight: bold;
+  color: #38bdf8;
+}
+
+.status {
+  color: #22c55e;
+  font-size: 12px;
+}
+
+h2 {
+  font-size: 21px;
+  margin-bottom: 18px;
+}
+
+.panel {
+  background: #111b2d;
+  border: 1px solid #25344d;
+  border-radius: 18px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.markets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+button, select {
+  background: #1c2b43;
+  color: white;
+  border: 1px solid #334966;
+  padding: 13px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  width: 100%;
+}
+
+button.active {
+  background: #075985;
+  border-color: #38bdf8;
+}
+
+select {
+  margin-top: 15px;
+}
+
+.circle-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 25px 0;
+}
+
+.circle {
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  border: 8px solid #64748b;
+  box-shadow: 0 0 25px #64748b44;
+  transition: border-color .5s, box-shadow .5s;
+}
+
+.circle.bullish {
+  border-color: #22c55e;
+  box-shadow: 0 0 35px #22c55e66;
+}
+
+.circle.bearish {
+  border-color: #ef4444;
+  box-shadow: 0 0 35px #ef444466;
+}
+
+.circle.neutral {
+  border-color: #64748b;
+  box-shadow: 0 0 25px #64748b44;
+}
+
+#result {
+  font-size: 27px;
+  font-weight: bold;
+}
+
+#timer {
+  font-size: 17px;
+  color: #94a3b8;
+  margin-top: 10px;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.metric {
+  background: #1a2940;
+  border-radius: 12px;
+  padding: 15px;
+}
+
+.metric small {
+  color: #94a3b8;
+}
+
+.metric strong {
+  display: block;
+  font-size: 19px;
+  margin-top: 8px;
+}
+
+.footer {
+  color: #64748b;
+  text-align: center;
+  font-size: 12px;
+  margin-top: 25px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="logo">🔥 SAMANDER AI</div>
+  <div class="status">● DASHBOARD</div>
+</header>
+
+<section class="panel">
+  <h2>Market Selection</h2>
+
+  <div class="markets">
+    <button class="active" onclick="setMarket('Crypto',this)">CRYPTO</button>
+    <button onclick="setMarket('Forex',this)">FOREX</button>
+    <button onclick="setMarket('Stocks',this)">STOCKS</button>
+  </div>
+
+  <select id="symbol">
+    <option>BTC</option>
+    <option>ETH</option>
+    <option>SOL</option>
+  </select>
+</section>
+
+<section class="panel">
+  <h2>1-Minute Candle Analysis</h2>
+
+  <div class="circle-wrap">
+    <div class="circle neutral" id="circle">
+      <div id="result">NEUTRAL</div>
+      <div id="timer">01:00</div>
+    </div>
+  </div>
+
+  <div class="metrics">
+    <div class="metric">
+      <small>Market Trend</small>
+      <strong id="trend">Waiting</strong>
+    </div>
+
+    <div class="metric">
+      <small>RSI</small>
+      <strong id="rsi">--</strong>
+    </div>
+
+    <div class="metric">
+      <small>EMA 20</small>
+      <strong id="ema20">--</strong>
+    </div>
+
+    <div class="metric">
+      <small>EMA 50</small>
+      <strong id="ema50">--</strong>
+    </div>
+  </div>
+</section>
+
+<div class="footer">
+  SAMANDER AI • Educational market analysis
+</div>
+
+<script>
+const symbols = {
+  Crypto: ["BTC", "ETH", "SOL"],
+  Forex: ["EURUSD", "GBPUSD", "USDJPY"],
+  Stocks: ["AAPL", "TSLA", "NVDA"]
+};
+
+function setMarket(market, button) {
+  document.querySelectorAll(".markets button")
+    .forEach(b => b.classList.remove("active"));
+
+  button.classList.add("active");
+
+  const select = document.getElementById("symbol");
+  select.innerHTML = "";
+
+  symbols[market].forEach(symbol => {
+    const option = document.createElement("option");
+    option.textContent = symbol;
+    select.appendChild(option);
+  });
+
+  resetDashboard();
+}
+
+function resetDashboard() {
+  document.getElementById("circle").className = "circle neutral";
+  document.getElementById("result").textContent = "NEUTRAL";
+  document.getElementById("trend").textContent = "Waiting";
+  document.getElementById("rsi").textContent = "--";
+  document.getElementById("ema20").textContent = "--";
+  document.getElementById("ema50").textContent = "--";
+}
+
+// Visual countdown only; it does not measure a live market candle.
+let seconds = 60;
+
+setInterval(() => {
+  seconds--;
+  if (seconds < 0) seconds = 60;
+
+  document.getElementById("timer").textContent =
+    "01:" + String(seconds).padStart(2, "0");
+}, 1000);
+</script>
+
+</body>
+</html>
