@@ -20,130 +20,145 @@ TOKEN = os.getenv("BOT_TOKEN")
 PUBLIC_URL = os.getenv("RENDER_EXTERNAL_URL")
 
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [
-        [InlineKeyboardButton("₿ CRYPTO", callback_data="market:crypto")],
-        [InlineKeyboardButton("💱 FOREX", callback_data="market:forex")],
-        [InlineKeyboardButton("📈 STOCKS", callback_data="market:stocks")]
-    ]
-
-    await update.message.reply_text(
-        "🔥 SAMANDER AI\n\n"
-        "MULTI-MARKET LIVE ANALYZER\n\n"
-        "Choose your market:",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+MARKETS = {
+    "crypto": ["BTC", "ETH", "SOL"],
+    "forex": ["EURUSD", "GBPUSD", "USDJPY"],
+    "stocks": ["AAPL", "TSLA", "NVDA"]
+}
 
 
-async def market_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
+def market_keyboard():
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("₿ CRYPTO", callback_data="market:crypto"),
+            InlineKeyboardButton("💱 FOREX", callback_data="market:forex")
+        ],
+        [
+            InlineKeyboardButton("📈 STOCKS", callback_data="market:stocks")
+        ]
+    ])
 
-    markets = {
-        "crypto": ["BTC", "ETH", "SOL"],
-        "forex": ["EURUSD", "GBPUSD"],
-        "stocks": ["AAPL", "TSLA", "NVDA"]
-    }
 
-    selected = query.data.split(":")[1]
+def symbol_keyboard(market):
+    buttons = []
+    for symbol in MARKETS[market]:
+        buttons.append([
+            InlineKeyboardButton(
+                symbol,
+                callback_data=f"symbol:{symbol}"
+            )
+        ])
 
-    keyboard = [
-        [InlineKeyboardButton(
-            symbol,
-            callback_data=f"analyze:{symbol}"
-        )]
-        for symbol in markets[selected]
-    ]
-
-    keyboard.append([
+    buttons.append([
         InlineKeyboardButton("⬅️ BACK", callback_data="back")
     ])
 
-    await query.edit_message_text(
-        f"Select {selected.upper()} symbol:",
-        reply_markup=InlineKeyboardMarkup(keyboard)
+    return InlineKeyboardMarkup(buttons)
+
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "🔥 SAMANDER AI\n\n"
+        "MULTI-MARKET CHART ANALYZER\n\n"
+        "Select a market:",
+        reply_markup=market_keyboard()
     )
 
 
-async def analyze_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def button_handler(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
     query = update.callback_query
     await query.answer()
 
-    symbol = query.data.split(":")[1]
+    action = query.data
 
-    await query.edit_message_text(f"Analyzing {symbol}...")
+    if action.startswith("market:"):
+        market = action.split(":")[1]
 
-    try:
-        data = await asyncio.to_thread(get_market_data, symbol)
-
-        if data is None or data.empty:
-            await query.message.reply_text("Market data unavailable.")
-            return
-
-        result = analyze_market(data)
-
-        if result.get("status") != "Analysis complete":
-            await query.message.reply_text(result["status"])
-            return
-
-        message = (
+        await query.edit_message_text(
             f"🔥 SAMANDER AI\n\n"
-            f"Symbol: {symbol}\n"
-            f"Timeframe: 1 Minute\n"
-            f"Price: {result['price']}\n"
-            f"Market: {result['market']}\n"
-            f"RSI: {result['rsi']}\n"
-            f"EMA20: {result['ema20']}\n"
-            f"EMA50: {result['ema50']}\n"
-            f"Patterns: {', '.join(result['patterns'])}\n\n"
-            "Educational market analysis."
+            f"Selected: {market.upper()}\n\n"
+            "Select a symbol:",
+            reply_markup=symbol_keyboard(market)
+        )
+        return
+
+    if action == "back":
+        await query.edit_message_text(
+            "🔥 SAMANDER AI\n\nSelect a market:",
+            reply_markup=market_keyboard()
+        )
+        return
+
+    if action.startswith("symbol:"):
+        symbol = action.split(":")[1]
+
+        await query.edit_message_text(
+            f"Analyzing {symbol}...\nPlease wait."
         )
 
-        await query.message.reply_text(message)
+        try:
+            data = await asyncio.to_thread(
+                get_market_data, symbol
+            )
 
-    except Exception:
-        logging.exception("Analysis failed")
-        await query.message.reply_text(
-            "Analysis error. Please try again."
-        )
+            if data is None or data.empty:
+                await query.message.reply_text(
+                    "Market data unavailable. Please try again later."
+                )
+                return
+
+            result = analyze_market(data)
+
+            if result.get("status") != "Analysis complete":
+                await query.message.reply_text(result["status"])
+                return
+
+            patterns = ", ".join(result["patterns"])
+
+            message = (
+                "🔥 SAMANDER AI\n\n"
+                f"Symbol: {symbol}\n"
+                "Timeframe: 1 Minute\n"
+                f"Price: {result['price']}\n"
+                f"Market: {result['market']}\n"
+                f"RSI: {result['rsi']}\n"
+                f"EMA20: {result['ema20']}\n"
+                f"EMA50: {result['ema50']}\n"
+                f"Patterns: {patterns}\n\n"
+                "Educational chart analysis — "
+                "not a trading instruction."
+            )
+
+            await query.message.reply_text(message)
+
+        except Exception:
+            logging.exception("Analysis failed")
+            await query.message.reply_text(
+                "Analysis failed. Please try again."
+            )
 
 
-async def back_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-
-    keyboard = [
-        [InlineKeyboardButton("₿ CRYPTO", callback_data="market:crypto")],
-        [InlineKeyboardButton("💱 FOREX", callback_data="market:forex")],
-        [InlineKeyboardButton("📈 STOCKS", callback_data="market:stocks")]
-    ]
-
-    await query.edit_message_text(
-        "🔥 SAMANDER AI\n\nChoose your market:",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-
-
-async def main():
+def main():
     if not TOKEN or not PUBLIC_URL:
-        raise RuntimeError("BOT_TOKEN or RENDER_EXTERNAL_URL missing")
+        raise RuntimeError(
+            "BOT_TOKEN or RENDER_EXTERNAL_URL missing"
+        )
 
     app = Application.builder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(market_buttons, pattern=r"^market:"))
-    app.add_handler(CallbackQueryHandler(analyze_button, pattern=r"^analyze:"))
-    app.add_handler(CallbackQueryHandler(back_button, pattern=r"^back$"))
+    app.add_handler(
+        CallbackQueryHandler(button_handler)
+    )
 
     port = int(os.getenv("PORT", "10000"))
 
-    print("SAMANDER AI starting...")
+    print("SAMANDER AI webhook starting...")
 
-    await app.bot.set_webhook(
-        url=f"{PUBLIC_URL}/{TOKEN}"
-    )
-
-    await app.run_webhook(
+    app.run_webhook(
         listen="0.0.0.0",
         port=port,
         url_path=TOKEN,
@@ -152,6 +167,5 @@ async def main():
 
 
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
-    
+    main()
+            
