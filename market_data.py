@@ -1,6 +1,7 @@
 
 import yfinance as yf
 import pandas as pd
+import time
 
 SYMBOLS = {
     # Crypto
@@ -66,37 +67,96 @@ SYMBOLS = {
 }
 
 
+def clean_market_data(data, ticker):
+    if data is None or data.empty:
+        return None
+
+    if isinstance(data.columns, pd.MultiIndex):
+        # Handle different yfinance column layouts
+        for level in range(data.columns.nlevels):
+            values = data.columns.get_level_values(level)
+
+            if ticker in values:
+                data = data.xs(ticker, axis=1, level=level)
+                break
+        else:
+            for level in range(data.columns.nlevels):
+                values = set(
+                    str(value).lower()
+                    for value in data.columns.get_level_values(level)
+                )
+
+                if {"open", "high", "low", "close"}.issubset(values):
+                    data.columns = data.columns.get_level_values(level)
+                    break
+
+    data.columns = [str(col).lower() for col in data.columns]
+
+    required = ["open", "high", "low", "close"]
+
+    if not all(col in data.columns for col in required):
+        return None
+
+    data = data.dropna(subset=required)
+    data = data[~data.index.duplicated(keep="last")]
+    data = data.sort_index()
+
+    if data.empty:
+        return None
+
+    return data
+
+
 def get_market_data(symbol):
-    ticker = SYMBOLS.get(symbol.upper())
+    symbol = symbol.upper().strip()
+    ticker = SYMBOLS.get(symbol)
 
     if not ticker:
+        print(f"Unknown symbol: {symbol}")
         return None
 
+    # Try Yahoo Finance download first
+    for attempt in range(2):
+        try:
+            data = yf.download(
+                ticker,
+                period="5d",
+                interval="1m",
+                progress=False,
+                auto_adjust=True,
+                threads=False,
+                timeout=20
+            )
+
+            cleaned = clean_market_data(data, ticker)
+
+            if cleaned is not None and len(cleaned) >= 2:
+                print(f"{symbol}: received {len(cleaned)} candles")
+                return cleaned
+
+        except Exception as error:
+            print(f"Download attempt {attempt + 1} failed for {symbol}: {error}")
+
+        time.sleep(1)
+
+    # Second method: ticker history
     try:
-        data = yf.download(
-            ticker,
+        data = yf.Ticker(ticker).history(
             period="5d",
             interval="1m",
-            progress=False,
-            auto_adjust=True
+            auto_adjust=True,
+            timeout=20
         )
 
-        if data is None or data.empty:
-            return None
+        cleaned = clean_market_data(data, ticker)
 
-        if isinstance(data.columns, pd.MultiIndex):
-            data.columns = data.columns.get_level_values(0)
-
-        data.columns = [str(c).lower() for c in data.columns]
-
-        required = ["open", "high", "low", "close"]
-
-        if not all(col in data.columns for col in required):
-            return None
-
-        return data.dropna(subset=required)
+        if cleaned is not None and len(cleaned) >= 2:
+            print(f"{symbol}: received {len(cleaned)} candles using fallback")
+            return cleaned
 
     except Exception as error:
-        print(f"Market data error for {symbol}: {error}")
-        return None
-        
+        print(f"History fallback failed for {symbol}: {error}")
+
+    print(f"{symbol}: no usable 1-minute data available")
+    return None
+                               
