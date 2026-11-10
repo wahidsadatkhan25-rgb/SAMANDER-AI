@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -26,6 +27,12 @@ button,select{
 }
 button.active{background:#075985;border-color:#38bdf8}
 select{margin-top:14px}
+.price-box{
+  background:#1a2940;border:1px solid #334966;
+  border-radius:14px;padding:18px;text-align:center;margin-top:15px
+}
+.price-box small{color:#94a3b8;font-size:13px}
+#price{font-size:28px;font-weight:bold;color:#38bdf8;margin-top:9px;overflow-wrap:anywhere}
 .circle-wrap{display:flex;justify-content:center;margin:25px 0}
 .circle{
   width:220px;height:220px;border-radius:50%;
@@ -69,6 +76,11 @@ select{margin-top:14px}
     <option value="BTC">BTC</option>
     <option value="ETH">ETH</option>
   </select>
+
+  <div class="price-box">
+    <small id="priceLabel">BTC LATEST AVAILABLE PRICE</small>
+    <div id="price">Loading...</div>
+  </div>
 </section>
 
 <section class="panel">
@@ -127,7 +139,6 @@ const symbols = {
 
 let seconds = 60;
 let loading = false;
-let selectedSymbol = "BTC";
 let requestNumber = 0;
 
 function setMarket(market,button){
@@ -146,6 +157,7 @@ function setMarket(market,button){
   });
 
   seconds=60;
+  resetDashboard();
   fetchAnalysis();
 }
 
@@ -158,6 +170,7 @@ function resetDashboard(){
   document.getElementById("ema20").textContent="--";
   document.getElementById("ema50").textContent="--";
   document.getElementById("count").textContent="--";
+  document.getElementById("price").textContent="Loading...";
   document.getElementById("lastUpdate").textContent="Last candle: --";
 }
 
@@ -167,8 +180,9 @@ async function fetchAnalysis(){
   loading=true;
   const thisRequest=++requestNumber;
   const symbol=document.getElementById("symbol").value;
-  selectedSymbol=symbol;
 
+  document.getElementById("priceLabel").textContent=
+    symbol+" LATEST AVAILABLE PRICE";
   document.getElementById("dataStatus").textContent="Fetching market data...";
   document.getElementById("connection").textContent="● CONNECTING";
 
@@ -188,33 +202,36 @@ async function fetchAnalysis(){
 
     const last=candles[candles.length-1];
     let direction="NEUTRAL";
-    let state="neutral";
     let circleClass="neutral";
 
     if(last.close>last.open){
       direction="UPWARD";
-      state="UPWARD";
       circleClass="up";
     }else if(last.close<last.open){
       direction="DOWNWARD";
-      state="DOWNWARD";
       circleClass="down";
     }
 
+    document.getElementById("price").textContent=
+      data.price!==null && data.price!==undefined
+        ? Number(data.price).toLocaleString(undefined,{maximumFractionDigits:8})
+        : "Unavailable";
+
     document.getElementById("circle").className="circle "+circleClass;
-    document.getElementById("result").textContent=state;
+    document.getElementById("result").textContent=direction;
     document.getElementById("direction").textContent=direction;
     document.getElementById("trend").textContent=data.market||"--";
     document.getElementById("rsi").textContent=data.rsi??"--";
     document.getElementById("ema20").textContent=data.ema20??"--";
     document.getElementById("ema50").textContent=data.ema50??"--";
     document.getElementById("count").textContent=candles.length;
+
     document.getElementById("lastUpdate").textContent=
       "Last candle: "+(data.last_candle_time||"--");
 
     document.getElementById("connection").textContent="● API CONNECTED";
     document.getElementById("dataStatus").textContent=
-      "Analysis received • "+data.symbol+" • 1m data";
+      "Data received • "+data.symbol+" • 1m interval";
 
   }catch(error){
     resetDashboard();
